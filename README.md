@@ -48,7 +48,7 @@ public ResponseEntity<String> createStudent(@RequestBody Student student) {
     LocalDate birthDate = LocalDate.parse(student.getBirthDate());
     LocalDate currentDate = LocalDate.now();
     if (birthDate.isAfter(currentDate)) {
-        return ResponseEntity.badRequest().body("Field birthDate must be a past date.");
+        return ResponseEntity.badRequest().body("Field birth_date must be a past date.");
     }
 
     // Se crea el estudiante en bd
@@ -87,7 +87,7 @@ void testCreateStudent_MissingRequiredFields() {
     ResponseEntity<String> response = studentsController.createStudent(student);
 
     Assertions.assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-    Assertions.assertTrue(response.getBody().contains("Fields name, birthDate and dni are required.")); // Verifica que la respuesta contiene el mensaje de error esperado
+    Assertions.assertTrue(response.getBody().contains("Fields name, birth_date and dni are required.")); // Verifica que la respuesta contiene el mensaje de error esperado
     verify(studentRepository, never()).save(any(Student.class)); // Verifica que no se llama al método save del repositorio
 }
 ```
