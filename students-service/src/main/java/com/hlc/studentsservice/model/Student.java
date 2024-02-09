@@ -11,6 +11,16 @@ public class Student {
     private String birth_date;
     private String dni;
 
+    public Student(String name, String birthDate, String dni) {
+        this.name = name;
+        this.birth_date = birthDate;
+        this.dni = dni;
+    }
+
+    public Student() {
+
+    }
+
     public String getId() {
         return id;
     }
@@ -41,5 +51,9 @@ public class Student {
 
     public void setDni(String dni) {
         this.dni = dni;
+    }
+
+    public String getBirthDate() {
+        return this.birth_date;
     }
 }
