@@ -7,7 +7,6 @@ import java.util.List;
 
 @FeignClient("subjects-service")
 public interface SubjectsClient {
-
     @GetMapping("/subjects")
     List<String> getAllSubjects();
 }
