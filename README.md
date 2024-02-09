@@ -1,211 +1,237 @@
-## Práctica 5: Testing en Spring Boot
+## Práctica 3
 
-En esta práctica vamos a realizar un conjunto de tests de diferente tipo para probar nuestra aplicación:
+En esta práctica vamos a abordar la fase de conexión de nuestros microservicios con la base de datos. Para este ejemplo usaremos una base de datos no relacional, **MongoDB**, por medio de MongoDB Atlas, una base de datos en la nube que nos permitirá la creación y gestión de nuestra BD de forma fácil y rápida.
 
-1. Tests unitarios.
-2. Tests de integración.
-3. Tests de rendimiento.
-
-📌 Para la realización de esta práctica, utiliza ramas en este repositorio. Puedes usar tantas ramas como creas conveniente. Realiza tantos commits como veas necesario. También puedes utilizar PR o cualquier elemento de Git/GitHub. Además, partiremos del código que hicimos en la **práctica 4**.
-
-### Tests unitarios
-
-📢 Los tests unitarios se enfocan en probar una **unidad de código de forma aislada**, generalmente una clase, un método o una función, sin depender de componentes externos como bases de datos, servicios web, etc. En Spring Boot, un test unitario podría involucrar la prueba de un componente específico, como un servicio, un repositorio o un controlador, utilizando mocks para simular el comportamiento de las dependencias externas.
+📌  Para la realización de esta práctica, utiliza ramas en este repositorio. Puedes usar tantas ramas como creas conveniente. Realiza tantos commits como veas necesario. También puedes utilizar PR o cualquier elemento de Git/GitHub. Además, partiremos del código que hicimos en la **práctica 2**.
 
 
-Empezaremos creando los tests unitarios en el proyecto students-service. Para ello, crearemos el fichero **StudentsControllerUnitTest.java** dentro de la carpeta `src/test/java/com.hlc.studentsservice/unit`). Esta clase tendrá, como mínimo, el siguiente contenido:
+### Conexión de subjects-service a MongoDB Atlas
+
+
+1. Crea una cuenta en MongoDB Atlas:
+   - Entra en [MongoDB Atlas](https://www.mongodb.com/cloud/atlas).
+   - Pulsa en `Try Free` y regístrate o inicia sesión con Google.
+
+   ![Alt text](images/image.png)
+
+   - La primera vez que entramos en la cuenta se mostrará un cuestionario de inicio. Tras rellenarlo pulsa en `Finish`:
+
+    ![Alt text](images/image-1.png)
+
+2. Crea el clúster:
+
+   - Tras crear la cuenta se muestran las posibles configuraciones para crear un clúster. Un clúster es un conjunto de servidores de base de datos distribuidos que trabajan juntos para almacenar y gestionar los datos (dentro de un clúster pueden existir varias bases de datos). Seleccionamos las opciones como se muestra a continuación y pulsamos en `Create`:
+
+   ![Alt text](images/image-2.png)
+![Alt text](images/image-9.png)
+
+   - En el siguiente paso nos pregunta cómo queremos realizar la autenticación a la BD. Elegimos **Username and Password**, rellenamos el formulario como se muestra en la siguiente imagen y pulsamos `Create User` (_Nota: no olvides guardar esta contraseña porque la usaremos luego_):
+
+   ![Alt text](images/image-5.png)
+
+   - Por último, indicamos que queremos conectarnos desde nuestro local usando la opción **My Local Environment**. De esta forma se permitirá el acceso a la BD por parte de las IPs que añadamos (la IP que estamos usando en ese momento se añade automáticamente).
+
+    ![Alt text](images/image-7.png)
+
+    - Pulsamos **Finish and Close** y **Go to Overview** y veremos las opciones disponibles en el clúster:
+
+    ![Alt text](images/image-10.png)
+
+3. Añade datos iniciales:
+   - Una vez creado el clúster, seleccionamos **Add Data** y **Create Database on Atlas**:
+
+   ![Alt text](images/image-11.png)
+   
+   - La BD de subjects se llamará **subjects-db**. Una asignatura quedará identificada por un código, nombre y número de horas. Los datos iniciales que introduciremos serán los siguientes:
+
+   ```json
+        [
+            {
+                "code": "SBJ001",
+                "name": "Acceso a datos",
+                "hours": 220
+            },
+            {
+                "code": "SBJ002",
+                "name": "Desarrollo de interfaces",
+                "hours": 258
+            },
+            {
+                "code": "SBJ003",
+                "name": "Desarrollo móvil",
+                "hours": 300
+            }
+        ]
+   ```
+
+   ![Alt text](images/image-12.png)
+
+   - Pulsamos en **Create Database**.
+   - Si ahora vamos a la sección de **Collections** veremos los datos insertados:
+
+   ![Alt text](images/image-13.png)
+
+
+
+## Configuración de subjects-service
+
+Ya que tenemos nuestra BD creada con datos iniciales vamos a configurar el proyecto de subjects-service para conectarse a ella y que pueda manipular esos datos.
+
+1. Añade la dependencia de MongoDB en el archivo `pom.xml`:
+
+   ```
+   <dependencies>
+       <!-- Otras dependencias -->
+       <dependency>
+           <groupId>org.springframework.boot</groupId>
+           <artifactId>spring-boot-starter-data-mongodb</artifactId>
+       </dependency>
+   </dependencies>
+    ```
+
+2. Configura la conexión a MongoDB en el fichero `application.properties`. Para ello, tenemos que añadir la siguiente línea:
 
 ```
-@SpringBootTest
-@ExtendWith(MockitoExtension.class)
-public class StudentsControllerUnitTest {
-
-    // Mock del repositorio
-    @Mock
-    private StudentRepository studentRepository;
-
-    // Mock de subjects-service
-    @Mock
-    private SubjectsClient subjectsClient;
-
-    // Inyectamos los mock anteriores en la clase StudentsController
-    @InjectMocks
-    private StudentsController studentsController;
-}
+spring.data.mongodb.uri=mongodb+srv://<USERNAME>:<PASSWORD>@<CLUSTER-URL>/<DATABASE>?retryWrites=true&w=majority
 ```
 
-Los primeros tests unitarios que crearemos serán del método `createStudent`:
+Para encontrar la cadena de conexión de nuestra BD, en MongoDB Atlas vamos a nuestro clúster y pulsamos **Connect**:
+
+![Alt text](images/image-14.png)
+
+En la sección de **Connect your application** pulsamos **Drivers** y seleccionamos `Java, 4.3 or later` y se mostrará la cadena:
+
+![Alt text](images/image-16.png)
+
+Para terminar, sustituimos la contraseña que generamos anteriormente y añadimos la BD a la cadena de conexión. Quedaría de la siguiente forma:
 
 ```
-@PostMapping("/students")
-public ResponseEntity<String> createStudent(@RequestBody Student student) {
-    // Se verifica que los campos requeridos no sean nulos
-    if (student.getName() == null || student.getBirthDate() == null || student.getDni() == null) {
-        return ResponseEntity.badRequest().body("Fields name, birth_date and dni are required.");
+spring.data.mongodb.uri=mongodb+srv://hlc:1234@hlc-cluster.z8unpzz.mongodb.net/subjects-db?retryWrites=true&w=majority
+```
+
+Si iniciamos el servicio y observamos los logs, veremos que indica que la conexión se ha realizado correctamente.
+
+3. A continuación vamos a crear una clase modelo para representar el objecto **Subjects**. Para ello, usamos las siguientes anotaciones:
+
+- `@Document`: se utiliza para indicar que una clase Java debe ser persistida como un documento en una colección MongoDB. Cada instancia de la clase se mapeará a un documento en la colección especificada
+- `@Id`: se utiliza para marcar el campo que actúa como el identificador único (clave primaria) de la clase. En el contexto de MongoDB, este campo se utilizará como el _id del documento correspondiente en la colección MongoDB.
+
+
+**Subject.java**
+```java
+package com.hlc.subjectsservice;
+
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+
+@Document(collection = "subjects")
+public class Subject {
+    @Id
+    private String id;
+    private String code;
+    private String name;
+    private int hours;
+
+    public String getCode() {
+        return code;
     }
 
-    // Se verifica que la fecha de nacimiento sea pasada
-    LocalDate birthDate = LocalDate.parse(student.getBirthDate());
-    LocalDate currentDate = LocalDate.now();
-    if (birthDate.isAfter(currentDate)) {
-        return ResponseEntity.badRequest().body("Field birth_date must be a past date.");
+    public void setCode(String code) {
+        this.code = code;
     }
 
-    // Se crea el estudiante en bd
-    Student persistedStudent = studentRepository.save(new Student(student.getName(), student.getBirthDate(), student.getDni()));
+    public String getName() {
+        return name;
+    }
 
-    return ResponseEntity.status(HttpStatus.CREATED).body(persistedStudent.toString());
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public int getHours() {
+        return hours;
+    }
+
+    public void setHours(int hours) {
+        this.hours = hours;
+    }
+
+    public String getId() {
+        return id;
+    }
 }
 ```
 
-Como vemos, este método crea un estudiante en BD pero antes comprueba que los campos no sean null y que la fecha de nacimiento no sea futura. Por lo cual, como mínimo deberemos crear los siguientes tests unitarios:
-1. **Test positivo** para comprobar que el objeto estudiante se crea correctamente.
+4. Tras crear la entidad Subject creamos la clase repositorio que se encargará de comunicarse con la BD. Esta clase debe ser una interfaz y tiene que extender de `MongoRepository<Tipo_Entidad, Tipo_ClavePrimaria>`. Para empezar, añadiremos el método findAll que devuelve todas las asignaturas:
 
-```
-@Test
-void testCreateStudent_Success() {
-    // Se configura el comportamiento del mock
-    Student student = new Student("John", "2000-01-29", "12345678A");
-    when(studentRepository.save(any(Student.class))).thenReturn(student);
+```java
+package com.hlc.subjectsservice;
 
-    // Se realiza la llamada al método
-    ResponseEntity<String> response = studentsController.createStudent(student);
+import org.springframework.data.mongodb.repository.MongoRepository;
+import java.util.List;
+import java.util.Optional;
 
-    // Se verifica la respuesta
-    Assertions.assertEquals(HttpStatus.CREATED, response.getStatusCode()); // Verifica que la respuesta es OK
-    Assertions.assertTrue(response.getBody().equals(student.toString())); // Verifica que la respuesta se corresponde con el objeto creado
-    verify(studentRepository, times(1)).save(any(Student.class)); // Verifica que se llama al método save del repositorio una vez
-}
-```
-2. **Test negativo** para comprobar que si alguno de los campos es null, se devuelve un mensaje de error.
+public interface SubjectRepository extends MongoRepository<Subject, String> {
 
-```
-@Test
-void testCreateStudent_MissingRequiredFields() {
-    Student student = new Student(); // Student sin campos obligatorios
-
-    ResponseEntity<String> response = studentsController.createStudent(student);
-
-    Assertions.assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-    Assertions.assertTrue(response.getBody().contains("Fields name, birth_date and dni are required.")); // Verifica que la respuesta contiene el mensaje de error esperado
-    verify(studentRepository, never()).save(any(Student.class)); // Verifica que no se llama al método save del repositorio
-}
-```
-3. **Test negativo** para comprobar que si el campo birth_date contiene una fecha futura, se devuelve un mensaje de error.
-
-```
-@Test
-void testCreateStudent_FutureBirthDate() {
-    Student student = new Student("Alice", "2100-01-01", "87654321B"); // Fecha de nacimiento en el futuro
-
-    ResponseEntity<String> response = studentsController.createStudent(student);
-
-    Assertions.assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-    Assertions.assertTrue(response.getBody().contains("Field birth_date must be a past date.")); // Verifica que la respuesta contiene el mensaje de error esperado
-    verify(studentRepository, never()).save(any(Student.class)); // Verifica que no se llama al método save del repositorio
+    // Método para buscar todas las asignaturas
+    List<Subject> findAll();
 }
 ```
 
-Al ejecutar los tests debería mostrarse que se han lanzado correctamente:
+💡 Como te puedes imaginar, el método `findAll` es proporcionado por la interfaz de MongoRepository. **¿Qué otros métodos proporciona esta interfaz?** Investiga la clase y la documentación para conocerlos.
 
-![alt text](images/image-1.png)
+5. Para comprobar que funciona, vamos a sustituir la lógica del método `getAllSubjects`, de forma que se devuelvan las asignaturas de la BD y no las que estaban escritas directamente en el código. Para ello, instanciamos nuestra clase SubjectRepository y llamamos al método findAll:
 
+```java
+package com.hlc.subjectsservice;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-💡 Crea los tests unitarios necesarios para el resto de métodos que has implementado, así como para el microservicio subjecs-service. **¿Necesitamos crear tests unitarios para discovery-service?**
+import java.util.List;
 
-### Tests de integración
-
-📢 Los tests de integración prueban **cómo interactúan múltiples componentes o sistemas en conjunto**, incluyendo sus integraciones con bases de datos, servicios externos, etc.
-En Spring Boot, un test de integración podría involucrar la configuración de un contexto de aplicación más completo, incluyendo la configuración de base de datos en memoria o la configuración de servicios web reales.
-
-Generalmente, hay dos enfoques comunes para escribir tests de integración:
-
-* **Test de integración real**: En este enfoque, se realiza una llamada real al sistema bajo prueba y se verifica la respuesta real del sistema. Este enfoque proporciona una validación más completa del comportamiento del sistema, ya que todas las capas y componentes interactúan como lo harían en producción. Sin embargo, puede ser más lento y dependiente de recursos externos, como bases de datos o servicios externos.
-
-* **Test de integración con mocks parciales**: En este enfoque, se utilizan mocks para simular ciertos componentes o capas del sistema, mientras que otras partes del sistema interactúan de forma real. Por ejemplo, puedes usar un mock para simular una capa de servicio o un repositorio, mientras que la llamada HTTP real se realiza al controlador. Este enfoque puede ser más rápido y más controlado, ya que se pueden simular diferentes condiciones y respuestas del sistema. Además, permite aislar la prueba de dependencias externas, como bases de datos o servicios externos, lo que puede ser útil en entornos de pruebas más complejos.
-
-Para crear nuestros tests de integración, en primer lugar, hay que crear el fichero **StudentsControllerIntegrationTest.java** dentro de la carpeta `src/test/java/com.hlc.studentsservice/integration`.
-Al igual que antes, crearemos los tests de integración para el método `createStudent`, ya que interactúa con un componente externo: la base de datos. Para este ejemplo optaremos por el enfoque de mocks parciales:
-
-```
-@ExtendWith(SpringExtension.class)
-@SpringBootTest
-@AutoConfigureMockMvc
-public class StudentsControllerIntegrationTest {
+@RestController
+public class SubjectsImpl implements Subjects {
 
     @Autowired
-    private MockMvc mockMvc;
+    private SubjectRepository subjectRepository;
 
-    @MockBean
-    private StudentRepository studentRepository;
-
-    @Test
-    void testCreateStudent() throws Exception {
-        // Se configura el comportamiento del mock del repositorio
-        Student student = new Student("John", "2000-01-29", "12345678A");
-        when(studentRepository.save(any(Student.class))).thenReturn(student);
-
-        // Se realiza la solicitud POST al endpoint /students
-        String studentJson = "{\"name\": \"John\", \"birthDate\": \"2000-01-29\", \"dni\": \"12345678A\"}";
-        mockMvc.perform(MockMvcRequestBuilders.post("/students")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(studentJson))
-                .andExpect(status().isCreated());
+    @GetMapping("/subjects")
+    public List<Subject> getAllSubjects() {
+        return subjectRepository.findAll();
     }
 }
 ```
 
+Para comprobar que funciona, iniciamos el servicio y vamos a `http://localhost:8082/subjects`. Deberíamos ver lo siguiente:
+
+![Alt text](images/image-17.png)
 
 
-🔎 Si te fijas, el test de integración que acabamos de crear es muy similar a los tests unitarios del apartado anterior. La principal diferencia es que en el test unitario no hay interacción con el contexto de Spring Boot ni con el sistema de manejo de peticiones HTTP, mientras que en el test de integración se interactúa con el controlador y el sistema de manejo de solicitudes HTTP de manera más completa.
+💡 **Crea los métodos necesarios para realizar el resto de métodos CRUD: crear, actualizar, borrar y seleccionar por ID.** Como sabes, a través del navegador solo pueden probarse los métodos de tipo GET, por lo cual necesitarás usar una herramienta externa como CURL o Postman para probar que funcionan.
 
+## Configuración de students-service
 
+Repite los pasos anteriores para crear una nueva BD en el clúster llamada students-bd. Tras ello, crea también los métodos CRUD que hemos creado en subjects-service.
 
-💡 **¿Para qué otros casos de nuestra aplicación necesitamos crear tests de integración?** Analízalo y si falta alguno, créalo (también en subjects-service).
+📝 **Un estudiante queda identificado por su nombre, fecha de nacimiento y DNI.**
 
-✨ **¿Cómo limpiarías el código de estos tests?** Piensa en qué objetos deberían estar dentro de constantes o qué funciones deberían estar en métodos independientes que puedan reutilizarse y aplica esos cambios a tus tests.
+Como datos iniciales de students-db puedes usar los siguientes:
 
-### Tests de rendimiento
-
-📢 Los tests de rendimiento tienen como objetivo principal medir cómo responde el sistema en términos de velocidad, capacidad, estabilidad y escalabilidad cuando se somete a diferentes niveles de carga. Se miden parámetros como el tiempo de respuesta o la tasa de transferencia.
-
-Para nuestros tests de rendimiento usaremos **JMeter**, una herramienta desarrollada para realizar tests de carga. En nuestro ejemplo testearemos el siguiente método de students-serivce:
-
+```json
+[
+    {
+        "name": "Lisa",
+        "birth_date": "1997-03-27", 
+        "dni": "12345678A"
+    },
+    {
+        "name": "Pablo",
+        "birth_date": "1990-08-14", 
+        "dni": "87654321B"
+    }
+]
 ```
-@GetMapping("/example")
-public List<Student> getExampleStudents() {
-    return Arrays.asList(
-            new Student("1", "John", "29/01/2000", "12312312A"),
-            new Student("2", "Alice", "12/04/2003", "87654321B"));
-}
-```
 
-Los pasos para crear el test son los siguientes:
-
-1. Descarga JMeter de su página oficial: https://jmeter.apache.org/download_jmeter.cgi
-2. En la carpeta descargada, entra en `/bin` y ejecuta el archivo `jmeter.sh`.
-3. Una vez abierto el programa, creamos un grupo de hilos:
-
-![alt text](images/image-2.png)
-
-4. Añadimos la siguientes configuración (presta atención especialmente al número de hilos):
-
-![alt text](images/image-3.png)
-
-5. Añadimos un muestreador de petición HTTP y la configuramos:
-
-![alt text](images/image-4.png)
-![alt text](images/image-5.png)
-
-6. Añadimos el árbol de resultados para verlos tras la ejecución del test:
-
-![alt text](images/image-6.png)
-
-7. Por último, ejecutamos el test y pulsamos en el árbol de resultados. Podemos observar que todas las peticiones se han realizado correctamente:
-
-![alt text](images/image-7.png)
-
-Con esta información podemos concluir con que el programa soporta como mínimo 100 peticiones concurrentes.
-
-💡 Modifica el número de hilos hasta encontrar el punto en el que el servicio **no puede soportar** más peticiones concurrentes.
+💡 Como has visto, para crear las clases entidad hemos usado getters y setters, y cuando tenemos muchas clases esto se convierte en algo repetitivo. Sin embargo, existen librerías para simplificar el código evitando tener que escribir esas partes. Una de ellas es [**lombok**](https://projectlombok.org/), que realiza la generación de código durante el tiempo de compilación, lo que significa que el código generado se incorpora al bytecode final y no afecta el rendimiento en tiempo de ejecución. **Investiga como incluir y usar lombok en nuestro proyecto**. Para comprobar que funciona, modifica los métodos **getAll** para que devuelvan únicamente el nombre de las asignaturas y los estudiantes usando el método **getName** autogenerado por lombok.
