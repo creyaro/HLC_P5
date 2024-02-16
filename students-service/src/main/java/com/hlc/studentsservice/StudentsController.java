@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.List;
 
 @RestController
@@ -28,7 +29,7 @@ public class StudentsController {
     @PostMapping("/students")
     public ResponseEntity<String> createStudent(@RequestBody Student student) {
         if (student.getName() == null || student.getBirthDate() == null || student.getDni() == null) {
-            return ResponseEntity.badRequest().body("Fields name, birth_date and dni are required.");
+            return ResponseEntity.badRequest().body("Fields name, birthDate and dni are required.");
         }
 
         LocalDate birthDate = LocalDate.parse(student.getBirthDate());
@@ -39,5 +40,11 @@ public class StudentsController {
         Student persistedStudent = studentsRepository.save(new Student(student.getName(), student.getBirthDate(), student.getDni()));
 
         return ResponseEntity.status(HttpStatus.CREATED).body(persistedStudent.toString());
+    }
+    @GetMapping("/example")
+    public List<Student> getExampleStudents() {
+        return Arrays.asList(
+                new Student("1", "John", "29/01/2000", "12312312A"),
+                new Student("2", "Alice", "12/04/2003", "87654321B"));
     }
 }

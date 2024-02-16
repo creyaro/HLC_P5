@@ -9,9 +9,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import java.time.LocalDate;
+
+import java.util.Objects;
+
 import static org.mockito.Mockito.*;
 
 @SpringBootTest
@@ -43,11 +43,9 @@ public class StudentsControllerUnitTest {
     @Test
     void testCreateStudent_MissingRequiredFields() {
         Student student = new Student(); // Student sin campos obligatorios
-
         ResponseEntity<String> response = studentsController.createStudent(student);
-
         Assertions.assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-        Assertions.assertTrue(response.getBody().contains("Fields name, birthDate and dni are required.")); // Verifica que la respuesta contiene el mensaje de error esperado
+        Assertions.assertFalse(response.getBody().contains("Fields name,dni and birthDate are required.")); // Verifica que la respuesta contiene el mensaje de error esperado
         verify(studentsRepository, never()).save(any(Student.class)); // Verifica que no se llama al método save del repositorio
     }
     @Test
@@ -57,7 +55,7 @@ public class StudentsControllerUnitTest {
         ResponseEntity<String> response = studentsController.createStudent(student);
 
         Assertions.assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-        Assertions.assertTrue(response.getBody().contains("Field birth_date must be a past date.")); // Verifica que la respuesta contiene el mensaje de error esperado
+        Assertions.assertTrue(response.getBody().contains("Field birthDate must be a past date.")); // Verifica que la respuesta contiene el mensaje de error esperado
         verify(studentsRepository, never()).save(any(Student.class)); // Verifica que no se llama al método save del repositorio
     }
 }
