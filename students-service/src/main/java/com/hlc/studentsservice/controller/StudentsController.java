@@ -32,7 +32,7 @@ public class StudentsController {
     public ResponseEntity<String> createStudent(@RequestBody Student student) {
         // Se verifica que los campos requeridos no sean nulos
         if (student.getName() == null || student.getBirthDate() == null || student.getDni() == null) {
-            return ResponseEntity.badRequest().body("Fields name, birthDate and dni are required.");
+            return ResponseEntity.badRequest().body("Fields name, birth_date and dni are required.");
         }
 
         // Se verifica que la fecha de nacimiento sea pasada

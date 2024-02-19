@@ -2,18 +2,22 @@ package com.hlc.studentsservice.model;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
+
+import java.time.LocalDate;
 
 @Document(collection = "students")
 public class Student {
     @Id
     private String id;
     private String name;
-    private String birth_date;
+    @Field("birth_date")
+    private String birthDate;
     private String dni;
 
     public Student(String name, String birthDate, String dni) {
         this.name = name;
-        this.birth_date = birthDate;
+        this.birthDate = birthDate;
         this.dni = dni;
     }
 
@@ -36,15 +40,9 @@ public class Student {
     public void setName(String name) {
         this.name = name;
     }
-
-    public String getBirth_date() {
-        return birth_date;
+    public void setBirthDate(String birthDate) {
+        this.birthDate = birthDate;
     }
-
-    public void setBirth_date(String birth_date) {
-        this.birth_date = birth_date;
-    }
-
     public String getDni() {
         return dni;
     }
@@ -54,6 +52,6 @@ public class Student {
     }
 
     public String getBirthDate() {
-        return this.birth_date;
+        return birthDate;
     }
 }

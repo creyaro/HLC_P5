@@ -35,26 +35,6 @@ public class StudentsControllerUnitTest {
     // Inyectamos los mock anteriores en la clase StudentsController
     @InjectMocks
     private StudentsController studentsController;
-
-    @PostMapping("/students")
-    public ResponseEntity<String> createStudent(@RequestBody Student student) {
-        // Se verifica que los campos requeridos no sean nulos
-        if (student.getName() == null || student.getBirth_date() == null || student.getDni() == null) {
-            return ResponseEntity.badRequest().body("Fields name, birth_date and dni are required.");
-        }
-
-        // Se verifica que la fecha de nacimiento sea pasada
-        LocalDate birthDate = LocalDate.parse(student.getBirth_date());
-        LocalDate currentDate = LocalDate.now();
-        if (birthDate.isAfter(currentDate)) {
-            return ResponseEntity.badRequest().body("Field birth_date must be a past date.");
-        }
-
-        // Se crea el estudiante en bd
-        Student persistedStudent = studentRepository.save(new Student(student.getName(), student.getBirth_date(), student.getDni()));
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(persistedStudent.toString());
-    }
     @Test
     void testCreateStudent_Success() {
         // Se configura el comportamiento del mock
@@ -88,9 +68,7 @@ public class StudentsControllerUnitTest {
         ResponseEntity<String> response = studentsController.createStudent(student);
 
         Assertions.assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-        Assertions.assertTrue(response.getBody().contains("Field birth_date must be a past date.")); // Verifica que la respuesta contiene el mensaje de error esperado
+        Assertions.assertTrue(response.getBody().contains("Field birthDate must be a past date.")); // Verifica que la respuesta contiene el mensaje de error esperado
         verify(studentRepository, never()).save(any(Student.class)); // Verifica que no se llama al método save del repositorio
     }
-
-
 }
