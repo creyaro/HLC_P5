@@ -1,0 +1,33 @@
+version: '3'
+
+services:
+  discovery-service:
+    build:
+      # Indicamos dónde se encuentra el Dockerfile de discovery-service
+      context: ./discovery-service
+    # Realizamos el mapeo de puertos de forma similar al comando run -p
+    ports:
+      - "8761:8761"
+
+  students-service:
+    build:
+      # Indicamos dónde se encuentra el Dockerfile de students-service
+      context: ./students-service
+    ports:
+      - "8081:8081"
+    # Indicamos que este microservicio depende de discovery-service, por lo cuál se iniciará cuando el discovery ya esté iniciado
+    depends_on:
+      - discovery-service
+    # Añadimos la variable de entorno EUREKA_SERVICE_URL
+    environment:
+      - EUREKA_SERVICE_URL=http://discovery-service:8761/eureka/
+
+  subjects-service:
+    build:
+      context: ./subject-service
+    ports:
+      - "8082:8082"
+    depends_on:
+      - discovery-service
+    environment:
+      - EUREKA_SERVICE_URL=http://discovery-service:8761/eureka/
